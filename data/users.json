@@ -1,8 +1,9 @@
 [
     {
         "ID": 2,
-        "name": "Anna",
-        "age": 25,
-        "is_active": false
+        "name": "Petr",
+        "age": 15,
+        "status": false,
+        "city": "Kazan"
     }
 ]

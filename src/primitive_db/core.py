@@ -216,3 +216,5 @@ def info(metadata, table_data, tb_name):
     print(f"Таблица: {tb_name}")
     print(f"Столбцы: {', '.join(columns)}")
     print(f"Количество записей: {len(table_data)}")
+
+
