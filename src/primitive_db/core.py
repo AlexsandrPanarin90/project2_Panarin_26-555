@@ -1,5 +1,6 @@
 from prettytable import PrettyTable
 
+
 def create_table(metadata, tb_name, columns):
     
     if tb_name in metadata: # проверяем есть ли уже создаваемая таблица
@@ -101,14 +102,15 @@ def insert(metadata, tb_name, table_data, values):
 
 def select(table_data, where_clause=None):
     if len(table_data) ==0:
-        print(f'Таблица пустая')
+        print('Таблица пустая')
         return
 
     # проверяем если  if where_clause = true тогда фильтруем по where_clause
     if where_clause:
         filtered_data = []
         for row in table_data:
-            # Проверяем, совпадают ли ВСЕ ключи и значения из where_clause с этой строкой
+            # Проверяем, совпадают ли ВСЕ ключи и 
+            # значения из where_clause с этой строкой
             match = True
             for key, value in where_clause.items():
                 # Приводим к строке для надежного сравнения (вдруг там числа)
@@ -196,7 +198,10 @@ def delete(table_data, tb_name, where_clause):
     # Выводим результат
     if deleted_ids:
         if len(deleted_ids) == 1:
-            print(f'Запись с ID={deleted_ids[0]} успешно удалена из таблицы "{tb_name}".')
+            print(
+                f'Запись с ID={deleted_ids[0]} '
+                f'успешно удалена из таблицы "{tb_name}".'
+            )
         else:
             print(f"Успешно удалено записей: {len(deleted_ids)}.")
     else:

@@ -4,21 +4,21 @@ import shlex
 import prompt
 
 from primitive_db.core import (
-    create_table, 
-    drop_table, 
-    insert, 
-    select, 
-    update, 
-    delete,  
-    info
-
+    create_table,
+    delete,
+    drop_table,
+    info,
+    insert,
+    select,
+    update,
 )
 from primitive_db.utils import (
-    load_metadata, 
-    save_metadata, 
-    load_table_data, 
-    save_table_data
-)# перенес чтобы не ругался ruff
+    load_metadata,
+    load_table_data,
+    save_metadata,
+    save_table_data,
+)  # перенес чтобы не ругался ruff
+
 
 #Превращает список аргументов после 'where' в словарь.
 def parse_where(args):
@@ -74,12 +74,24 @@ def print_help():
     print("<command> list_tables - показать список всех таблиц")
     print("<command> drop_table <имя_таблицы> - удалить таблицу")
 
-    print("\nCRUD-операции:")
-    print("<command> insert into <имя_таблицы> values (<значение1>, <значение2>, ...) - создать запись.")
-    print("<command> select from <имя_таблицы> where <столбец> = <значение> - прочитать записи по условию.")
+    print(
+        "<command> insert into <имя_таблицы> values (...) "
+        "- создать запись."
+    )
+    print(
+        "<command> select from <имя_таблицы> where <столбец> = <значение> "
+        "- прочитать записи по условию."
+    )
     print("<command> select from <имя_таблицы> - прочитать все записи.")
-    print("<command> update <имя_таблицы> set <столбец1> = <новое_значение1> where <столбец_условия> = <значение_условия> - обновить запись.")
-    print("<command> delete from <имя_таблицы> where <столбец> = <значение> - удалить запись.")
+    print(
+        "<command> update <имя_таблицы> set <столбец1> = <новое_значение1> "
+        "where <столбец_условия> = <значение_условия> - обновить запись."
+    )
+    print(
+        "<command> delete from <имя_таблицы> where <столбец> = <значение> "
+        "- удалить запись."
+    )
+    print("<command> info <имя_таблицы> - вывести информацию о таблице.")
     print("<command> info <имя_таблицы> - вывести информацию о таблице.")
     
     print("\nКоманды:")
@@ -142,7 +154,10 @@ def run():
         elif command == "insert":
                     # Проверяем, что команда состоит хотя бы из 5 частей
                     if len(args) < 5 or args[1] != "into" or args[3] != "values":
-                        print("Некорректное значение: неверный синтаксис команды insert.")
+                        print(
+                            "Некорректное значение: неверный синтаксис "
+                            "команды insert."
+                        )
                         continue
 
                     table_name = args[2]
@@ -204,7 +219,10 @@ def run():
 
         elif command == "info":
             if len(args) < 2:
-                print("Некорректное значение: не хватает имени таблицы. Попробуйте снова.")
+                print(
+                    "Некорректное значение: не хватает имени таблицы. "
+                    "Попробуйте снова."
+                )
                 continue
                 
             table_name = args[1]
