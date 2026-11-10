@@ -2,6 +2,7 @@ import os
 
 from prettytable import PrettyTable
 
+from primitive_db.constants import VALID_TYPES
 from primitive_db.decorators import (
     confirm_action,
     create_cacher,
@@ -14,7 +15,7 @@ _cache_result, clear_select_cache = create_cacher()
 
 @handle_db_errors
 def create_table(metadata, tb_name, columns):
-    
+    """Создает новую таблицу с указанными колонками."""    
     if tb_name in metadata: # проверяем есть ли уже создаваемая таблица
         print(
             f"Ошибка: таблица с именем '{tb_name}' уже существует. "
@@ -35,7 +36,7 @@ def create_table(metadata, tb_name, columns):
         
         name, col_type = col.split(":") 
         # проверяем типы
-        if col_type != "int" and col_type != "str" and col_type != "bool":  
+        if col_type not in VALID_TYPES:
             print(f'Ошибка: недопустимый тип данных "{col_type}".')
             return metadata
 
@@ -53,7 +54,7 @@ def create_table(metadata, tb_name, columns):
 @handle_db_errors
 @confirm_action("удаление таблицы")
 def drop_table(metadata, tb_name):
-
+    """Удаляет таблицу и связанный с ней файл данных."""
     if tb_name in metadata:
         del metadata[tb_name]
         
@@ -77,7 +78,7 @@ def drop_table(metadata, tb_name):
 @log_time
 @handle_db_errors
 def insert(metadata, tb_name, table_data, values):
-
+    """Добавляет новую запись в таблицу с проверкой типов."""
     if tb_name not in metadata:
         print(f'Ошибка: Таблица "{tb_name}" не существует.')
         return table_data
@@ -124,7 +125,7 @@ def insert(metadata, tb_name, table_data, values):
 @log_time
 @handle_db_errors
 def select(tb_name, where_clause=None):
-        
+    """Выводит записи таблицы. Кэширует результат по имени и условию."""        
     # ключ кэша (имя таблицы + условие)
     where_key = tuple(sorted(where_clause.items())) if where_clause else None
     cache_key = (tb_name, where_key)
@@ -176,6 +177,7 @@ def select(tb_name, where_clause=None):
 #правильно не привязываться к примеру а делать универсально
 @handle_db_errors
 def update(table_data, set_clause, where_clause):
+    """Обновляет поля в записях, подходящих под условие where."""    
     if not table_data:
         print("Таблица пуста.")
         return table_data
@@ -214,6 +216,7 @@ def update(table_data, set_clause, where_clause):
 @handle_db_errors
 @confirm_action("удаление записи")
 def delete(table_data, tb_name, where_clause):
+    """Удаляет записи, подходящие под условие where."""    
     # если таблица пустая тогда нечего удалять 
     if not table_data:
         print("Таблица пуста.")
@@ -259,7 +262,7 @@ def delete(table_data, tb_name, where_clause):
 #Выводит информацию о таблице
 @handle_db_errors
 def info(metadata, table_data, tb_name):
-
+    """Выводит структуру таблицы и количество записей в ней."""
     if tb_name not in metadata:
         print(f'Ошибка: Таблица "{tb_name}" не существует.')
         return

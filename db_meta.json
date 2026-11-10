@@ -1,8 +1,1 @@
-{
-    "cities": [
-        "ID:int",
-        "name:str",
-        "population:int",
-        "is_capital:bool"
-    ]
-}
+{}

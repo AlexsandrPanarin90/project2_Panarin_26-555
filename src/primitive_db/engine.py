@@ -3,6 +3,7 @@ import shlex
 
 import prompt
 
+from primitive_db.constants import META_FILE
 from primitive_db.core import (
     create_table,
     delete,
@@ -12,6 +13,7 @@ from primitive_db.core import (
     select,
     update,
 )
+from primitive_db.parser import parse_set, parse_where
 from primitive_db.utils import (
     load_metadata,
     load_table_data,
@@ -19,48 +21,8 @@ from primitive_db.utils import (
     save_table_data,
 )  # перенес чтобы не ругался ruff
 
-
-#Превращает список аргументов после 'where' в словарь.
-def parse_where(args):
-    if "where" not in args:
-        return None
-        
-    where_index = args.index("where")
-    
-    condition_str = " ".join(args[where_index + 1:])
-    
-    if "=" not in condition_str:
-        return None
-    parts = condition_str.split("=")
-    
-    col_name = parts[0].strip()
-    
-    col_value = parts[1].strip().strip('"').strip("'")
-    
-    return {col_name: col_value}
-
-# делаем список аргументов после set в словарь
-def parse_set(args):
-    
-    if "set" not in args:
-        return None
-        
-    set_index = args.index("set")
-    where_index = args.index("where") if "where" in args else len(args)
-    
-    condition_str = " ".join(args[set_index + 1 : where_index])
-    
-    if "=" not in condition_str:
-        return None
-        
-    parts = condition_str.split("=")
-    col_name = parts[0].strip()
-    col_value = parts[1].strip().strip('"').strip("'")
-    
-    return {col_name: col_value}
-
 # Добавил переменную с именем файла базы данных
-DB_FILE = "db_meta.json"
+#DB_FILE = "db_meta.json"
 
 
 # (Раньше это было просто кучей print внутри цикла 
@@ -120,7 +82,7 @@ def run():
         command = args[0]
 
         # Загружаем актуальные данные из JSON-файла перед каждой командой
-        metadata = load_metadata(DB_FILE)
+        metadata = load_metadata(META_FILE)
 
         if command == "exit":
             print("Выход из программы...")
@@ -140,7 +102,7 @@ def run():
             
             # создаем таблицу
             metadata = create_table(metadata, table_name, columns)
-            save_metadata(DB_FILE, metadata)
+            save_metadata(META_FILE, metadata)
 
         # Добавил обработку команды удаления таблицы
         elif command == "drop_table":
@@ -153,7 +115,7 @@ def run():
             # изменил так как при тесте записалась null в metadata все сломалось
             result = drop_table(metadata, table_name) 
             if result is not None:                    
-                save_metadata(DB_FILE, result)        
+                save_metadata(META_FILE, result)        
 
         elif command == "insert":
                     # Проверяем, что команда состоит хотя бы из 5 частей
