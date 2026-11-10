@@ -1,0 +1,6 @@
+{
+    "users": [
+        "ID:int",
+        "name:str"
+    ]
+}
