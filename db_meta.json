@@ -1,9 +1,8 @@
 {
-    "users": [
+    "cities": [
         "ID:int",
         "name:str",
-        "age:int",
-        "status:bool",
-        "city:str"
+        "population:int",
+        "is_capital:bool"
     ]
 }

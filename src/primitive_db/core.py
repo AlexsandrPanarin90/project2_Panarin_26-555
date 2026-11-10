@@ -1,6 +1,18 @@
+import os
+
 from prettytable import PrettyTable
 
+from primitive_db.decorators import (
+    confirm_action,
+    create_cacher,
+    handle_db_errors,
+    log_time,
+)
+from primitive_db.utils import load_table_data
 
+_cache_result, clear_select_cache = create_cacher()
+
+@handle_db_errors
 def create_table(metadata, tb_name, columns):
     
     if tb_name in metadata: # проверяем есть ли уже создаваемая таблица
@@ -38,11 +50,22 @@ def create_table(metadata, tb_name, columns):
     return metadata
 
 
+@handle_db_errors
+@confirm_action("удаление таблицы")
 def drop_table(metadata, tb_name):
 
-    if tb_name in metadata: # проверяем есть ли уже создаваемая таблица
+    if tb_name in metadata:
         del metadata[tb_name]
+        
+        # Внес корретировки так как создавался мусор - 
+        # приходилось каждый раз чистить создаваемые таблицы
+        # Это мешает работать
+        filepath = f"data/{tb_name}.json"
+        if os.path.exists(filepath):
+            os.remove(filepath)
+            
         print(f"Успешно! Таблица с именем '{tb_name}' удалена")
+        clear_select_cache()
     else:        
         print(
             f"Ошибка: таблица с именем '{tb_name}' не существует. "
@@ -51,6 +74,8 @@ def drop_table(metadata, tb_name):
     return metadata 
 
 
+@log_time
+@handle_db_errors
 def insert(metadata, tb_name, table_data, values):
 
     if tb_name not in metadata:
@@ -76,11 +101,7 @@ def insert(metadata, tb_name, table_data, values):
         col_name, col_type = col.split(":")
         
         if col_type == "int":
-            try:
-                new_record[col_name] = int(val)
-            except ValueError:
-                print(f'Ошибка: Значение "{val}" не является целым числом (int).')
-                return table_data
+            new_record[col_name] = int(val)
                 
         elif col_type == "bool":
             val_clean = str(val).lower().strip('"').strip("'")
@@ -97,30 +118,46 @@ def insert(metadata, tb_name, table_data, values):
 
     table_data.append(new_record)
     print(f'Запись с ID={new_id} успешно добавлена в таблицу "{tb_name}".')
+    clear_select_cache()
     return table_data
 
-
-def select(table_data, where_clause=None):
-    if len(table_data) ==0:
-        print('Таблица пустая')
-        return
-
-    # проверяем если  if where_clause = true тогда фильтруем по where_clause
-    if where_clause:
-        filtered_data = []
-        for row in table_data:
-            # Проверяем, совпадают ли ВСЕ ключи и 
-            # значения из where_clause с этой строкой
-            match = True
-            for key, value in where_clause.items():
-                # Приводим к строке для надежного сравнения (вдруг там числа)
-                if str(row.get(key)) != str(value):
-                    match = False
-                    break
-            if match:
-                filtered_data.append(row)
+@log_time
+@handle_db_errors
+def select(tb_name, where_clause=None):
         
-        table_data = filtered_data
+    # ключ кэша (имя таблицы + условие)
+    where_key = tuple(sorted(where_clause.items())) if where_clause else None
+    cache_key = (tb_name, where_key)
+
+    # загружаем и фильтруем данные
+    def _fetch():
+        table_data = load_table_data(tb_name)
+        
+        if not table_data:
+            return None
+
+        # проверяем если if where_clause = true тогда фильтруем по where_clause
+        if where_clause:
+            filtered_data = []
+            for row in table_data:
+                # Проверяем, совпадают ли ВСЕ ключи и 
+                # значения из where_clause с этой строкой
+                match = True
+                for key, value in where_clause.items():
+                    # Приводим к строке для надежного сравнения (вдруг там числа)
+                    if str(row.get(key)) != str(value):
+                        match = False
+                        break
+                if match:
+                    filtered_data.append(row)
+            
+            return filtered_data
+        
+        return table_data
+
+    # Вызываем кэшер. Если данные уже есть в кэше - он их вернет, 
+    # если нет - вызовет _fetch() и сохранит результат.
+    table_data = _cache_result(cache_key, _fetch)
 
     if not table_data:
         print("Записей по заданному условию не найдено.")
@@ -134,7 +171,10 @@ def select(table_data, where_clause=None):
     print(table)
 
 
-#обновляет записи, подходящие под where_clause.
+# обновляет записи, подходящие под where_clause.
+# внес корректировки, делал под  пример из задания
+#правильно не привязываться к примеру а делать универсально
+@handle_db_errors
 def update(table_data, set_clause, where_clause):
     if not table_data:
         print("Таблица пуста.")
@@ -142,17 +182,20 @@ def update(table_data, set_clause, where_clause):
 
     updated_count = 0
     for row in table_data:
-        # проверяем подходет ли строка под условие where
+        # проверяем подходит ли строка под условие where
         match = True
         for key, value in where_clause.items():
             if str(row.get(key)) != str(value):
                 match = False
                 break
                 
-        # если да обновляем поля из set_clause
+        # если да, обновляем поля из set_clause
         if match:
             for key, value in set_clause.items():
-                if key == "ID" or key == "age":
+                # здесь внес корретировки, что если значение 
+                # состоит из цифр (или начинается с минуса), тодга 
+                # это число, и его надо сохранить как int
+                if value.lstrip("-").isdigit():
                     row[key] = int(value)
                 else:
                     row[key] = value
@@ -160,6 +203,7 @@ def update(table_data, set_clause, where_clause):
 
     if updated_count > 0:
         print(f"Успешно обновлено записей: {updated_count}.")
+        clear_select_cache() 
     else:
         print("Записей по заданному условию не найдено.")
         
@@ -167,6 +211,8 @@ def update(table_data, set_clause, where_clause):
 
 
 #Удаляет записи подходящие под where_clause
+@handle_db_errors
+@confirm_action("удаление записи")
 def delete(table_data, tb_name, where_clause):
     # если таблица пустая тогда нечего удалять 
     if not table_data:
@@ -204,12 +250,14 @@ def delete(table_data, tb_name, where_clause):
             )
         else:
             print(f"Успешно удалено записей: {len(deleted_ids)}.")
+        clear_select_cache()    
     else:
         print("Записей по заданному условию не найдено.")
         
     return data_n
 
 #Выводит информацию о таблице
+@handle_db_errors
 def info(metadata, table_data, tb_name):
 
     if tb_name not in metadata:

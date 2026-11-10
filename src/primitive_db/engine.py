@@ -74,6 +74,9 @@ def print_help():
     print("<command> list_tables - показать список всех таблиц")
     print("<command> drop_table <имя_таблицы> - удалить таблицу")
 
+
+    print("\nCRUD-операции:")
+    print("***Операции с данными***")
     print(
         "<command> insert into <имя_таблицы> values (...) "
         "- создать запись."
@@ -91,7 +94,6 @@ def print_help():
         "<command> delete from <имя_таблицы> where <столбец> = <значение> "
         "- удалить запись."
     )
-    print("<command> info <имя_таблицы> - вывести информацию о таблице.")
     print("<command> info <имя_таблицы> - вывести информацию о таблице.")
     
     print("\nКоманды:")
@@ -148,8 +150,10 @@ def run():
             table_name = args[1]
             
             # Удаляем таблицу
-            metadata = drop_table(metadata, table_name)
-            save_metadata(DB_FILE, metadata)
+            # изменил так как при тесте записалась null в metadata все сломалось
+            result = drop_table(metadata, table_name) 
+            if result is not None:                    
+                save_metadata(DB_FILE, result)        
 
         elif command == "insert":
                     # Проверяем, что команда состоит хотя бы из 5 частей
@@ -183,10 +187,10 @@ def run():
             
             # вызываем пасрер чтобы получить солварь или none
             where_clause = parse_where(args)
-            table_data = load_table_data(table_name)
-
-            # вызываем функцию select из core и отдаем в нее where_clause
-            select(table_data, where_clause)
+            
+            # убрал load_table_data, 
+            # теперь select сам загружает данные и кэширует их
+            select(table_name, where_clause)
 
         elif command == "update":
             if len(args) < 6 or "set" not in args or "where" not in args:
@@ -214,8 +218,11 @@ def run():
             
             # Загружаем данные, удаляем и сохраняем
             table_data = load_table_data(table_name)
-            table_data = delete(table_data, table_name, where_clause) 
-            save_table_data(table_name, table_data)
+            # таже причина изменний что и для drop_table
+            result = delete(table_data, table_name, where_clause) 
+            if result is not None:                                
+                save_table_data(table_name, result)               
+
 
         elif command == "info":
             if len(args) < 2:
